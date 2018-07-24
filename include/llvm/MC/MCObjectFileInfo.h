@@ -50,6 +50,8 @@ protected:
   /// Compact unwind encoding indicating that we should emit only an EH frame.
   unsigned CompactUnwindDwarfEHFrameOnly;
 
+  MCSection *MhdrSection;
+
   /// Section directive for standard text.
   MCSection *TextSection;
 
@@ -227,6 +229,7 @@ public:
     return CompactUnwindDwarfEHFrameOnly;
   }
 
+  MCSection *getMhdrSection() const { return MhdrSection; }
   MCSection *getTextSection() const { return TextSection; }
   MCSection *getDataSection() const { return DataSection; }
   MCSection *getBSSSection() const { return BSSSection; }

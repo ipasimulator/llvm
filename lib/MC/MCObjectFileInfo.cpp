@@ -616,6 +616,10 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
+  MhdrSection = Ctx->getCOFFSection(
+      "._mhdr", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
+      SectionKind::getReadOnly(), "mhdr_start");
+
   EHFrameSection = Ctx->getCOFFSection(
       ".eh_frame", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                        COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,

@@ -39,6 +39,7 @@ public:
   /// \name MCStreamer interface
   /// \{
 
+  void EmitMhdrSection() override;
   void InitSections(bool NoExecStack) override;
   void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override;

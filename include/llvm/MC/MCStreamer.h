@@ -400,6 +400,8 @@ public:
       SectionStack.back().first = MCSectionSubPair(Section, Subsection);
   }
 
+  virtual void EmitMhdrSection() {}
+
   /// \brief Create the default sections and set the initial one.
   virtual void InitSections(bool NoExecStack);
 

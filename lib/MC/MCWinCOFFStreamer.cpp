@@ -66,6 +66,12 @@ void MCWinCOFFStreamer::EmitInstToData(const MCInst &Inst,
   DF->getContents().append(Code.begin(), Code.end());
 }
 
+void MCWinCOFFStreamer::EmitMhdrSection() {
+  SwitchSection(getContext().getObjectFileInfo()->getMhdrSection());
+  EmitCodeAlignment(4);
+  EmitBytes("ipaSim");
+}
+
 void MCWinCOFFStreamer::InitSections(bool NoExecStack) {
   // FIXME: this is identical to the ELF one.
   // This emulates the same behavior of GNU as. This makes it easier
