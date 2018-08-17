@@ -159,6 +159,9 @@ protected:
   /// Section containing metadata on function stack sizes.
   MCSection *StackSizesSection;
 
+  // [port] CHANGED: Added, [fixbind].
+  MCSection *FixBindSection;
+
   // ELF specific sections.
   MCSection *DataRelROSection;
   MCSection *MergeableConst4Section;
@@ -300,6 +303,9 @@ public:
   MCSection *getFaultMapSection() const { return FaultMapSection; }
 
   MCSection *getStackSizesSection() const { return StackSizesSection; }
+
+  // [port] CHANGED: Added, [fixbind].
+  MCSection *getFixBindSection() const { return FixBindSection; }
 
   // ELF specific sections.
   MCSection *getDataRelROSection() const { return DataRelROSection; }
