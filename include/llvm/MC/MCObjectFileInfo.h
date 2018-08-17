@@ -167,6 +167,9 @@ protected:
   MCSection *StackSizesSection;
   mutable DenseMap<const MCSymbol *, unsigned> StackSizesUniquing;
 
+  // [port] CHANGED: Added, [fixbind].
+  MCSection *FixBindSection;
+
   // ELF specific sections.
   MCSection *DataRelROSection;
   MCSection *MergeableConst4Section;
@@ -312,6 +315,9 @@ public:
   MCSection *getFaultMapSection() const { return FaultMapSection; }
 
   MCSection *getStackSizesSection(const MCSection &TextSec) const;
+
+  // [port] CHANGED: Added, [fixbind].
+  MCSection *getFixBindSection() const { return FixBindSection; }
 
   // ELF specific sections.
   MCSection *getDataRelROSection() const { return DataRelROSection; }

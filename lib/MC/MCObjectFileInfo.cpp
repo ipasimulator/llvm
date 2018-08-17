@@ -863,6 +863,12 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                                         COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                             COFF::IMAGE_SCN_MEM_READ,
                                         SectionKind::getReadOnly());
+
+  // [port] CHANGED: Added, [fixbind].
+  FixBindSection = Ctx->getCOFFSection(".fixbind",
+                                       COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                           COFF::IMAGE_SCN_MEM_READ,
+                                       SectionKind::getReadOnly());
 }
 
 void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {

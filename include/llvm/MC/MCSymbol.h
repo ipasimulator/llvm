@@ -99,6 +99,9 @@ protected:
   /// This symbol is private extern.
   mutable unsigned IsPrivateExtern : 1;
 
+  // [port] CHANGED: Added, [fixbind].
+  mutable unsigned NeedsRuntimeFix : 1;
+
   /// LLVM RTTI discriminator. This is actually a SymbolKind enumerator, but is
   /// unsigned to avoid sign extension and achieve better bitpacking with MSVC.
   unsigned Kind : 3;
@@ -395,6 +398,10 @@ public:
 
   bool isPrivateExtern() const { return IsPrivateExtern; }
   void setPrivateExtern(bool Value) { IsPrivateExtern = Value; }
+
+  // [port] CHANGED: Added these two functions, [fixbind].
+  bool needsRuntimeFix() const { return NeedsRuntimeFix; }
+  void setNeedsRuntimeFix(bool Value) { NeedsRuntimeFix = Value; }
 
   /// print - Print the value to the stream \p OS.
   void print(raw_ostream &OS, const MCAsmInfo *MAI) const;

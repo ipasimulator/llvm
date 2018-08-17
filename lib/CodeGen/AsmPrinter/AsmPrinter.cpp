@@ -2048,8 +2048,21 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV))
     return MCConstantExpr::create(CI->getZExtValue(), Ctx);
 
-  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV))
-    return MCSymbolRefExpr::create(getSymbol(GV), Ctx);
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
+    MCSymbol *S = getSymbol(GV);
+
+    // [port] CHANGED: Added this `if`, [fixbind].
+    if (S->needsRuntimeFix()) {
+      OutStreamer->PushSection();
+      OutStreamer->SwitchSection(Ctx.getObjectFileInfo()->getFixBindSection());
+
+      // TODO: Emit something.
+
+      OutStreamer->PopSection();
+    }
+
+    return MCSymbolRefExpr::create(S, Ctx);
+  }
 
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(CV))
     return MCSymbolRefExpr::create(GetBlockAddressSymbol(BA), Ctx);

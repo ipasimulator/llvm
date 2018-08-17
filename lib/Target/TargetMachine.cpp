@@ -23,6 +23,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSymbol.h" // [port] CHANGED: Added, [fixbind].
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -256,13 +257,18 @@ void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,
 MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV) const {
   const TargetLoweringObjectFile *TLOF = getObjFileLowering();
   SmallString<128> NameStr;
-  // [port] CHANGED: [dllimport].
+  // [port] CHANGED: Added this `if`, [dllimport].
   if (GV->hasDLLImportStorageClass()) {
     // Handle dllimport linkage.
     NameStr += "__imp_";
   }
   getNameWithPrefix(NameStr, GV, TLOF->getMangler());
-  return TLOF->getContext().getOrCreateSymbol(NameStr);
+  MCSymbol *S = TLOF->getContext().getOrCreateSymbol(NameStr);
+  // [port] CHANGED: Added this `if`, [fixbind].
+  if (GV->hasDLLImportStorageClass()) {
+    S->setNeedsRuntimeFix(true);
+  }
+  return S;
 }
 
 TargetIRAnalysis TargetMachine::getTargetIRAnalysis() {
