@@ -2053,10 +2053,19 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
 
     // [port] CHANGED: Added this `if`, [fixbind].
     if (S->needsRuntimeFix()) {
+      // Create a label in the location where the symbol is to be emitted.
+      // [port] TODO: This is very wrong - it is not ensured that the constant
+      // lowered in this function will be immediately emitted to `OutStreamer`,
+      // but we are assuming here that it will be.
+      MCSymbol *L = Ctx.createTempSymbol();
+      OutStreamer->EmitLabel(L);
+
+      // Switch to section `.fixbind`.
       OutStreamer->PushSection();
       OutStreamer->SwitchSection(Ctx.getObjectFileInfo()->getFixBindSection());
 
-      // TODO: Emit something.
+      // Emit reference to the label created earlier.
+      EmitLabelReference(L, MAI->getCodePointerSize());
 
       OutStreamer->PopSection();
     }

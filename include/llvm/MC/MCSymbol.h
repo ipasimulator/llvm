@@ -153,11 +153,12 @@ protected:
     uint64_t AlignmentPadding;
   };
 
+  // [port] CHANGED: Added `NeedsRuntimeFix(false)`, [fixbind].
   MCSymbol(SymbolKind Kind, const StringMapEntry<bool> *Name, bool isTemporary)
       : IsTemporary(isTemporary), IsRedefinable(false), IsUsed(false),
         IsRegistered(false), IsExternal(false), IsPrivateExtern(false),
-        Kind(Kind), IsUsedInReloc(false), SymbolContents(SymContentsUnset),
-        CommonAlignLog2(0), Flags(0) {
+        NeedsRuntimeFix(false), Kind(Kind), IsUsedInReloc(false),
+        SymbolContents(SymContentsUnset), CommonAlignLog2(0), Flags(0) {
     Offset = 0;
     FragmentAndHasName.setInt(!!Name);
     if (Name)
