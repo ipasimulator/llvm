@@ -2048,30 +2048,8 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV))
     return MCConstantExpr::create(CI->getZExtValue(), Ctx);
 
-  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
-    MCSymbol *S = getSymbol(GV);
-
-    // [port] CHANGED: Added this `if`, [fixbind].
-    if (S->needsRuntimeFix()) {
-      // Create a label in the location where the symbol is to be emitted.
-      // [port] TODO: This is very wrong - it is not ensured that the constant
-      // lowered in this function will be immediately emitted to `OutStreamer`,
-      // but we are assuming here that it will be.
-      MCSymbol *L = Ctx.createTempSymbol();
-      OutStreamer->EmitLabel(L);
-
-      // Switch to section `.fixbind`.
-      OutStreamer->PushSection();
-      OutStreamer->SwitchSection(Ctx.getObjectFileInfo()->getFixBindSection());
-
-      // Emit reference to the label created earlier.
-      EmitLabelReference(L, MAI->getCodePointerSize());
-
-      OutStreamer->PopSection();
-    }
-
-    return MCSymbolRefExpr::create(S, Ctx);
-  }
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV))
+    return MCSymbolRefExpr::create(getSymbol(GV), Ctx);
 
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(CV))
     return MCSymbolRefExpr::create(GetBlockAddressSymbol(BA), Ctx);
@@ -2640,6 +2618,28 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   // directly.
   if (AP.getObjFileLowering().supportIndirectSymViaGOTPCRel())
     handleIndirectSymViaGOTPCRel(AP, &ME, BaseCV, Offset);
+
+  // [port] CHANGED: Added this `if`, [fixbind].
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
+    MCSymbol *S = AP.getSymbol(GV);
+
+    if (S->needsRuntimeFix()) {
+      // Create a label in the location where the symbol is to be emitted.
+      MCSymbol *L = AP.OutContext.createTempSymbol();
+      AP.OutStreamer->EmitLabel(L);
+
+      // Switch to section `.fixbind`.
+      AP.OutStreamer->PushSection();
+      AP.OutStreamer->SwitchSection(
+          AP.OutContext.getObjectFileInfo()->getFixBindSection());
+
+      // Emit reference to the label created earlier.
+      AP.EmitLabelReference(L, AP.MAI->getCodePointerSize());
+
+      // Switch back before emitting the symbol.
+      AP.OutStreamer->PopSection();
+    }
+  }
 
   AP.OutStreamer->EmitValue(ME, Size);
 }
