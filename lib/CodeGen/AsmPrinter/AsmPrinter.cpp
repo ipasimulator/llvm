@@ -2623,7 +2623,9 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
     MCSymbol *S = AP.getSymbol(GV);
 
-    if (S->needsRuntimeFix()) {
+    // [port] TODO: We can't fix up the symbol if it's inside read-only section.
+    if (S->needsRuntimeFix() &&
+        !AP.OutStreamer->getCurrentSectionOnly()->getKind().isReadOnly()) {
       // Create a label in the location where the symbol is to be emitted.
       MCSymbol *L = AP.OutContext.createTempSymbol();
       AP.OutStreamer->EmitLabel(L);
