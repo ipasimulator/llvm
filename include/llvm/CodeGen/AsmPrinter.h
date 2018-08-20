@@ -225,7 +225,9 @@ public:
   void getNameWithPrefix(SmallVectorImpl<char> &Name,
                          const GlobalValue *GV) const;
 
-  MCSymbol *getSymbol(const GlobalValue *GV) const;
+  // [port] CHANGED: Added parameter `forReadOnlySection`, [fixbind].
+  MCSymbol *getSymbol(const GlobalValue *GV,
+                      bool forReadOnlySection = false) const;
 
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
@@ -341,7 +343,9 @@ public:
   void EmitAlignment(unsigned NumBits, const GlobalObject *GO = nullptr) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
-  virtual const MCExpr *lowerConstant(const Constant *CV);
+  // [port] CHANGED: Added parameter `forReadOnlySection`, [fixbind].
+  virtual const MCExpr *lowerConstant(const Constant *CV,
+                                      bool forReadOnlySection = false);
 
   /// \brief Print a general LLVM constant to the .s file.
   void EmitGlobalConstant(const DataLayout &DL, const Constant *CV);

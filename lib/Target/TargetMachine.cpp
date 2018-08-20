@@ -254,18 +254,22 @@ void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,
   TLOF->getNameWithPrefix(Name, GV, *this);
 }
 
-MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV) const {
+// [port] CHANGED: Added parameter `forReadOnlySection`, [fixbind].
+MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV,
+                                   bool forReadOnlySection) const {
   const TargetLoweringObjectFile *TLOF = getObjFileLowering();
   SmallString<128> NameStr;
   // [port] CHANGED: Added this `if`, [dllimport].
-  if (GV->hasDLLImportStorageClass()) {
+  bool needsRuntimeFix;
+  if (needsRuntimeFix =
+          (GV->hasDLLImportStorageClass() && !forReadOnlySection)) {
     // Handle dllimport linkage.
     NameStr += "__imp_";
   }
   getNameWithPrefix(NameStr, GV, TLOF->getMangler());
   MCSymbol *S = TLOF->getContext().getOrCreateSymbol(NameStr);
   // [port] CHANGED: Added this `if`, [fixbind].
-  if (GV->hasDLLImportStorageClass()) {
+  if (needsRuntimeFix) {
     S->setNeedsRuntimeFix(true);
   }
   return S;
