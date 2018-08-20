@@ -424,8 +424,11 @@ void AsmPrinter::getNameWithPrefix(SmallVectorImpl<char> &Name,
   TM.getNameWithPrefix(Name, GV, getObjFileLowering().getMangler());
 }
 
-MCSymbol *AsmPrinter::getSymbol(const GlobalValue *GV) const {
-  return TM.getSymbol(GV);
+// [port] CHANGED: Added parameter `forReadOnlySection`, [fixbind].
+MCSymbol *AsmPrinter::getSymbol(const GlobalValue *GV,
+                                bool forReadOnlySection) const {
+  // [port] CHANGED: Passed parameter `forReadOnlySection`, [fixbind].
+  return TM.getSymbol(GV, forReadOnlySection);
 }
 
 /// EmitGlobalVariable - Emit the specified global variable to the .s file.
@@ -2039,7 +2042,9 @@ void AsmPrinter::EmitAlignment(unsigned NumBits, const GlobalObject *GV) const {
 // Constant emission.
 //===----------------------------------------------------------------------===//
 
-const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
+// [port] CHANGED: Added parameter `forReadOnlySection`, [fixbind].
+const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
+                                        bool forReadOnlySection) {
   MCContext &Ctx = OutContext;
 
   if (CV->isNullValue() || isa<UndefValue>(CV))
@@ -2049,7 +2054,8 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     return MCConstantExpr::create(CI->getZExtValue(), Ctx);
 
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV))
-    return MCSymbolRefExpr::create(getSymbol(GV), Ctx);
+    // [port] CHANGED: Passed parameter `forReadOnlySection`, [fixbind].
+    return MCSymbolRefExpr::create(getSymbol(GV, forReadOnlySection), Ctx);
 
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(CV))
     return MCSymbolRefExpr::create(GetBlockAddressSymbol(BA), Ctx);
@@ -2611,7 +2617,10 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
 
   // Otherwise, it must be a ConstantExpr.  Lower it to an MCExpr, then emit it
   // thread the streamer with EmitValue.
-  const MCExpr *ME = AP.lowerConstant(CV);
+  // [port] CHANGED: Added variable `isSectionReadOnly`, [fixbind].
+  bool isSectionReadOnly =
+      AP.OutStreamer->getCurrentSectionOnly()->getKind().isReadOnly();
+  const MCExpr *ME = AP.lowerConstant(CV, isSectionReadOnly);
 
   // Since lowerConstant already folded and got rid of all IR pointer and
   // integer casts, detect GOT equivalent accesses by looking into the MCExpr
@@ -2621,11 +2630,11 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
 
   // [port] CHANGED: Added this `if`, [fixbind].
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
-    MCSymbol *S = AP.getSymbol(GV);
+    MCSymbol *S = AP.getSymbol(GV, isSectionReadOnly);
 
     if (S->needsRuntimeFix()) {
-      // We can't fix up the symbol if it's inside read-only section.
-      if (AP.OutStreamer->getCurrentSectionOnly()->getKind().isReadOnly())
+      // We can't fix up the symbol if it's inside a read-only section.
+      if (isSectionReadOnly)
         report_fatal_error(
             "symbol '" + S->getName() +
             "' needs runtime fix, but is inside a read-only section");
