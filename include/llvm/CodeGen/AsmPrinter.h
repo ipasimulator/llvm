@@ -347,9 +347,9 @@ public:
   void EmitAlignment(unsigned NumBits, const GlobalObject *GV = nullptr) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
-  // [port] CHANGED: Added parameter `forReadOnlySection`, [fixbind].
+  // [port] CHANGED: Added parameter `willEmit`, [fixbind].
   virtual const MCExpr *lowerConstant(const Constant *CV,
-                                      bool forReadOnlySection = false);
+                                      bool willEmit = false);
 
   /// Print a general LLVM constant to the .s file.
   void EmitGlobalConstant(const DataLayout &DL, const Constant *CV);

@@ -2042,9 +2042,8 @@ void AsmPrinter::EmitAlignment(unsigned NumBits, const GlobalObject *GV) const {
 // Constant emission.
 //===----------------------------------------------------------------------===//
 
-// [port] CHANGED: Added parameter `forReadOnlySection`, [fixbind].
-const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
-                                        bool forReadOnlySection) {
+// [port] CHANGED: Added parameter `willEmit`, [fixbind].
+const MCExpr *AsmPrinter::lowerConstant(const Constant *CV, bool willEmit) {
   MCContext &Ctx = OutContext;
 
   if (CV->isNullValue() || isa<UndefValue>(CV))
@@ -2053,9 +2052,39 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV))
     return MCConstantExpr::create(CI->getZExtValue(), Ctx);
 
-  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV))
-    // [port] CHANGED: Passed parameter `forReadOnlySection`, [fixbind].
-    return MCSymbolRefExpr::create(getSymbol(GV, forReadOnlySection), Ctx);
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
+
+    // [port] CHANGED: Added variable `isSectionReadOnly`, [fixbind].
+    bool isSectionReadOnly =
+        OutStreamer->getCurrentSectionOnly()->getKind().isReadOnly();
+
+    MCSymbol *S = getSymbol(GV, isSectionReadOnly);
+
+    // [port] CHANGED: Added this `if`, [fixbind].
+    if (willEmit && S->needsRuntimeFix()) {
+      // We can't fix up the symbol if it's inside a read-only section.
+      if (isSectionReadOnly)
+        report_fatal_error(
+            "symbol '" + S->getName() +
+            "' needs runtime fix, but is inside a read-only section");
+
+      // Create a label in the location where the symbol is to be emitted.
+      MCSymbol *L = Ctx.createTempSymbol();
+      OutStreamer->EmitLabel(L);
+
+      // Switch to section `.fixbind`.
+      OutStreamer->PushSection();
+      OutStreamer->SwitchSection(Ctx.getObjectFileInfo()->getFixBindSection());
+
+      // Emit reference to the label created earlier.
+      EmitLabelReference(L, MAI->getCodePointerSize());
+
+      // Switch back before emitting the symbol.
+      OutStreamer->PopSection();
+    }
+
+    return MCSymbolRefExpr::create(S, Ctx);
+  }
 
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(CV))
     return MCSymbolRefExpr::create(GetBlockAddressSymbol(BA), Ctx);
@@ -2072,7 +2101,8 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     // last resort before giving up.
     if (Constant *C = ConstantFoldConstant(CE, getDataLayout()))
       if (C != CE)
-        return lowerConstant(C);
+        // [port] CHANGED: Passed parameter `willEmit`, [fixbind].
+        return lowerConstant(C, willEmit);
 
     // Otherwise report the problem to the user.
     {
@@ -2088,7 +2118,8 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     APInt OffsetAI(getDataLayout().getPointerTypeSizeInBits(CE->getType()), 0);
     cast<GEPOperator>(CE)->accumulateConstantOffset(getDataLayout(), OffsetAI);
 
-    const MCExpr *Base = lowerConstant(CE->getOperand(0));
+    // [port] CHANGED: Passed parameter `willEmit`, [fixbind].
+    const MCExpr *Base = lowerConstant(CE->getOperand(0), willEmit);
     if (!OffsetAI)
       return Base;
 
@@ -2104,7 +2135,8 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     // is reasonable to treat their delta as a 32-bit value.
     LLVM_FALLTHROUGH;
   case Instruction::BitCast:
-    return lowerConstant(CE->getOperand(0));
+    // [port] CHANGED: Passed parameter `willEmit`, [fixbind].
+    return lowerConstant(CE->getOperand(0), willEmit);
 
   case Instruction::IntToPtr: {
     const DataLayout &DL = getDataLayout();
@@ -2113,8 +2145,9 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     // integer type.  This promotes constant folding and simplifies this code.
     Constant *Op = CE->getOperand(0);
     Op = ConstantExpr::getIntegerCast(Op, DL.getIntPtrType(CV->getType()),
-                                      false/*ZExt*/);
-    return lowerConstant(Op);
+                                      false /*ZExt*/);
+    // [port] CHANGED: Passed parameter `willEmit`, [fixbind].
+    return lowerConstant(Op, willEmit);
   }
 
   case Instruction::PtrToInt: {
@@ -2125,7 +2158,8 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     Constant *Op = CE->getOperand(0);
     Type *Ty = CE->getType();
 
-    const MCExpr *OpExpr = lowerConstant(Op);
+    // [port] CHANGED: Passed parameter `willEmit`, [fixbind].
+    const MCExpr *OpExpr = lowerConstant(Op, willEmit);
 
     // We can emit the pointer value into this slot if the slot is an
     // integer slot equal to the size of the pointer.
@@ -2617,44 +2651,14 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
 
   // Otherwise, it must be a ConstantExpr.  Lower it to an MCExpr, then emit it
   // thread the streamer with EmitValue.
-  // [port] CHANGED: Added variable `isSectionReadOnly`, [fixbind].
-  bool isSectionReadOnly =
-      AP.OutStreamer->getCurrentSectionOnly()->getKind().isReadOnly();
-  const MCExpr *ME = AP.lowerConstant(CV, isSectionReadOnly);
+  // [port] CHANGED: Passed parameter `willEmit`, [fixbind].
+  const MCExpr *ME = AP.lowerConstant(CV, /* willEmit: */ true);
 
   // Since lowerConstant already folded and got rid of all IR pointer and
   // integer casts, detect GOT equivalent accesses by looking into the MCExpr
   // directly.
   if (AP.getObjFileLowering().supportIndirectSymViaGOTPCRel())
     handleIndirectSymViaGOTPCRel(AP, &ME, BaseCV, Offset);
-
-  // [port] CHANGED: Added this `if`, [fixbind].
-  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
-    MCSymbol *S = AP.getSymbol(GV, isSectionReadOnly);
-
-    if (S->needsRuntimeFix()) {
-      // We can't fix up the symbol if it's inside a read-only section.
-      if (isSectionReadOnly)
-        report_fatal_error(
-            "symbol '" + S->getName() +
-            "' needs runtime fix, but is inside a read-only section");
-
-      // Create a label in the location where the symbol is to be emitted.
-      MCSymbol *L = AP.OutContext.createTempSymbol();
-      AP.OutStreamer->EmitLabel(L);
-
-      // Switch to section `.fixbind`.
-      AP.OutStreamer->PushSection();
-      AP.OutStreamer->SwitchSection(
-          AP.OutContext.getObjectFileInfo()->getFixBindSection());
-
-      // Emit reference to the label created earlier.
-      AP.EmitLabelReference(L, AP.MAI->getCodePointerSize());
-
-      // Switch back before emitting the symbol.
-      AP.OutStreamer->PopSection();
-    }
-  }
 
   AP.OutStreamer->EmitValue(ME, Size);
 }
