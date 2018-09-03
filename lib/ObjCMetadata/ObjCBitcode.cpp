@@ -75,7 +75,7 @@ static Value *GetUnderlyingValue(Value *V, const DataLayout &DL,
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       V = cast<Operator>(V)->getOperand(0);
     } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
-      if (GA->mayBeOverridden())
+      if (GA->isInterposable())
         return V;
       V = GA->getAliasee();
     } else if (PtrToIntOperator *PTI = dyn_cast<PtrToIntOperator>(V)) {

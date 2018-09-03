@@ -1262,9 +1262,9 @@ MachOMetadata::getSymbolFromAddress(uint64_t Address, uint64_t &offset) const {
   const char *SymbolName = nullptr;
   if (reloc_found && isExtern) {
     offset = Symbol.getValue();
-    ErrorOr<StringRef> NameOrError = Symbol.getName();
+    Expected<StringRef> NameOrError = Symbol.getName();
     if (!NameOrError) {
-      return errorOrToExpected(std::move(NameOrError));
+      return NameOrError.takeError();
     }
     StringRef Name = *NameOrError;
     if (!Name.empty()) {
