@@ -1,0 +1,5 @@
+[ver:1,total:420]
+lib/ObjCMetadata/ObjCMachOBinary.cpp:240,1536012000:240,m
+lib/ObjCMetadata/CMakeLists.txt:90,1536012000:90,r
+lib/ObjCMetadata/ObjCBitcode.cpp:60,1536012000:60,m
+lib/CMakeLists.txt:30,1536012000:30,r
