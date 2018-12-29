@@ -261,8 +261,8 @@ MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV,
   SmallString<128> NameStr;
   // [port] CHANGED: Added this `if`, [dllimport].
   bool needsRuntimeFix;
-  if (needsRuntimeFix =
-          (GV->hasDLLImportStorageClass() && !forReadOnlySection)) {
+  if ((needsRuntimeFix =
+           (GV->hasDLLImportStorageClass() && !forReadOnlySection))) {
     // Handle dllimport linkage.
     NameStr += "__imp_";
   }
