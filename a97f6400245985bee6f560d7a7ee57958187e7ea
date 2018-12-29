@@ -1,0 +1,10 @@
+[ver:1,total:1380]
+lib/Target/TargetMachine.cpp:540,1546088400:540,m
+lib/Support/Windows/Signals.inc:180,1541887200:180,r
+include/llvm/Support/AlignOf.h:180,1545595200:180,r
+cmake/modules/TableGen.cmake:180,1546095600:180,r
+lib/IR/CMakeLists.txt:120,1546095600:120,r
+CMakeLists.txt:60,1546095600:60,r
+lib/BinaryFormat/Dwarf.cpp:60,1545595200:60,r
+cmake/modules/CMakeLists.txt:30,1546095600:30,r
+tools/llvm-rc/CMakeLists.txt:30,1546095600:30,r
