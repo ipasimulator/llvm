@@ -402,6 +402,9 @@ static Error checkSymtabCommand(const MachOObjectFile &Obj,
                                 uint32_t LoadCommandIndex,
                                 const char **SymtabLoadCmd,
                                 std::list<MachOElement> &Elements) {
+  // [port] CHANGED: Added this `if`.
+  if (Obj.isMachOPoser())
+    return Error::success();
   if (Load.C.cmdsize < sizeof(MachO::symtab_command))
     return malformedError("load command " + Twine(LoadCommandIndex) +
                           " LC_SYMTAB cmdsize too small");
@@ -458,6 +461,9 @@ static Error checkDysymtabCommand(const MachOObjectFile &Obj,
                                   uint32_t LoadCommandIndex,
                                   const char **DysymtabLoadCmd,
                                   std::list<MachOElement> &Elements) {
+  // [port] CHANGED: Added this `if`.
+  if (Obj.isMachOPoser())
+    return Error::success();
   if (Load.C.cmdsize < sizeof(MachO::dysymtab_command))
     return malformedError("load command " + Twine(LoadCommandIndex) +
                           " LC_DYSYMTAB cmdsize too small");
@@ -589,6 +595,9 @@ static Error checkLinkeditDataCommand(const MachOObjectFile &Obj,
                                  const char **LoadCmd, const char *CmdName,
                                  std::list<MachOElement> &Elements,
                                  const char *ElementName) {
+  // [port] CHANGED: Added this `if`.
+  if (Obj.isMachOPoser())
+    return Error::success();
   if (Load.C.cmdsize < sizeof(MachO::linkedit_data_command))
     return malformedError("load command " + Twine(LoadCommandIndex) + " " +
                           CmdName + " cmdsize too small");
@@ -623,6 +632,9 @@ static Error checkDyldInfoCommand(const MachOObjectFile &Obj,
                                   uint32_t LoadCommandIndex,
                                   const char **LoadCmd, const char *CmdName,
                                   std::list<MachOElement> &Elements) {
+  // [port] CHANGED: Added this `if`.
+  if (Obj.isMachOPoser())
+    return Error::success();
   if (Load.C.cmdsize < sizeof(MachO::dyld_info_command))
     return malformedError("load command " + Twine(LoadCommandIndex) + " " +
                           CmdName + " cmdsize too small");
