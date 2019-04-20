@@ -30,6 +30,8 @@ public:
 
   bool isObjC1() const override;
   bool isObjC2() const override;
+  // [port] CHANGED: Added this method.
+  void forceObjC2(bool Value);
 
   const object::MachOObjectFile *getOwningBinary() const {
     return OwningBinary;
@@ -129,6 +131,8 @@ public:
 
 private:
   const object::MachOObjectFile *OwningBinary;
+  // [port] CHANGED: Added this field.
+  bool ObjC2 = false;
 };
 
 }

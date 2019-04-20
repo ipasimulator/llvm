@@ -1079,8 +1079,12 @@ bool MachOMetadata::isObjC2() const {
       OwningBinary->getHeader().cputype == MachO::CPU_TYPE_ARM)
     return true;
 
-  return !(getSection("__OBJC", "__module_info") == SectionRef());
+  // [port] CHANGED: Used `ObjC2`.
+  return !(getSection("__OBJC", "__module_info") == SectionRef()) || ObjC2;
 }
+
+// [port] CHANGED: Added this method.
+void MachOMetadata::forceObjC2(bool Value) { ObjC2 = Value; }
 
 const SectionRef MachOMetadata::getSection(const char *segname,
                                            const char *sectname) const {
