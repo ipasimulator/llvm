@@ -301,11 +301,15 @@ static Error parseSegmentLoadCommand(
         return malformedError("offset field of section " + Twine(J) + " in " +
                               CmdName + " command " + Twine(LoadCommandIndex) +
                               " extends past the end of the file");
+      // [port] CHANGED: Added and used `IsMhdr`. Our `__mhdr` section contains
+      // [port] the header, so it would break some of  the following assertions.
+      bool IsMhdr = !strncmp(s.segname, "__TEXT", 16) &&
+                    !strncmp(s.sectname, "__mhdr", 16);
       if (Obj.getHeader().filetype != MachO::MH_DYLIB_STUB &&
           Obj.getHeader().filetype != MachO::MH_DSYM &&
           s.flags != MachO::S_ZEROFILL &&
           s.flags != MachO::S_THREAD_LOCAL_ZEROFILL && S.fileoff == 0 &&
-          s.offset < SizeOfHeaders && s.size != 0)
+          s.offset < SizeOfHeaders && s.size != 0 && !IsMhdr)
         return malformedError("offset field of section " + Twine(J) + " in " +
                               CmdName + " command " + Twine(LoadCommandIndex) +
                               " not past the headers of the file");
@@ -348,7 +352,7 @@ static Error parseSegmentLoadCommand(
       if (Obj.getHeader().filetype != MachO::MH_DYLIB_STUB &&
           Obj.getHeader().filetype != MachO::MH_DSYM &&
           s.flags != MachO::S_ZEROFILL &&
-          s.flags != MachO::S_THREAD_LOCAL_ZEROFILL)
+          s.flags != MachO::S_THREAD_LOCAL_ZEROFILL && !IsMhdr)
         if (Error Err = checkOverlappingElement(Elements, s.offset, s.size,
                                                 "section contents"))
           return Err;
@@ -381,7 +385,8 @@ static Error parseSegmentLoadCommand(
       return malformedError("load command " + Twine(LoadCommandIndex) +
                             " fileoff field plus filesize field in " +
                             CmdName + " extends past the end of the file");
-    if (S.vmsize != 0 && S.filesize > S.vmsize)
+    // [port] CHANGED: Used `isMachOPoser`.
+    if (S.vmsize != 0 && S.filesize > S.vmsize && !Obj.isMachOPoser())
       return malformedError("load command " + Twine(LoadCommandIndex) +
                             " filesize field in " + CmdName +
                             " greater than vmsize field");
@@ -1196,25 +1201,27 @@ static bool isLoadCommandObsolete(uint32_t cmd) {
   return false;
 }
 
+// [port] CHANGED: Added `MachOPoser`.
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
-                        bool Is64Bits, uint32_t UniversalCputype,
-                        uint32_t UniversalIndex) {
+                        bool Is64Bits, bool MachOPoser,
+                        uint32_t UniversalCputype, uint32_t UniversalIndex) {
   Error Err = Error::success();
   std::unique_ptr<MachOObjectFile> Obj(
-      new MachOObjectFile(std::move(Object), IsLittleEndian,
-                          Is64Bits, Err, UniversalCputype,
-                          UniversalIndex));
+      new MachOObjectFile(std::move(Object), IsLittleEndian, Is64Bits, Err,
+                          MachOPoser, UniversalCputype, UniversalIndex));
   if (Err)
     return std::move(Err);
   return std::move(Obj);
 }
 
+// [port] CHANGED: Added `MachOPoser`.
 MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
-                                 bool Is64bits, Error &Err,
+                                 bool Is64bits, Error &Err, bool MachOPoser,
                                  uint32_t UniversalCputype,
                                  uint32_t UniversalIndex)
-    : ObjectFile(getMachOType(IsLittleEndian, Is64bits), Object) {
+    : ObjectFile(getMachOType(IsLittleEndian, Is64bits), Object),
+      MachOPoser(MachOPoser) {
   ErrorAsOutParameter ErrAsOutParam(&Err);
   uint64_t SizeOfHeaders;
   uint32_t cputype;
@@ -4599,22 +4606,23 @@ bool MachOObjectFile::isRelocatableObject() const {
   return getHeader().filetype == MachO::MH_OBJECT;
 }
 
+// [port] CHANGED: Added `MachOPoser`.
 Expected<std::unique_ptr<MachOObjectFile>>
-ObjectFile::createMachOObjectFile(MemoryBufferRef Buffer,
+ObjectFile::createMachOObjectFile(MemoryBufferRef Buffer, bool MachOPoser,
                                   uint32_t UniversalCputype,
                                   uint32_t UniversalIndex) {
   StringRef Magic = Buffer.getBuffer().slice(0, 4);
   if (Magic == "\xFE\xED\xFA\xCE")
-    return MachOObjectFile::create(Buffer, false, false,
+    return MachOObjectFile::create(Buffer, false, false, MachOPoser,
                                    UniversalCputype, UniversalIndex);
   if (Magic == "\xCE\xFA\xED\xFE")
-    return MachOObjectFile::create(Buffer, true, false,
+    return MachOObjectFile::create(Buffer, true, false, MachOPoser,
                                    UniversalCputype, UniversalIndex);
   if (Magic == "\xFE\xED\xFA\xCF")
-    return MachOObjectFile::create(Buffer, false, true,
+    return MachOObjectFile::create(Buffer, false, true, MachOPoser,
                                    UniversalCputype, UniversalIndex);
   if (Magic == "\xCF\xFA\xED\xFE")
-    return MachOObjectFile::create(Buffer, true, true,
+    return MachOObjectFile::create(Buffer, true, true, MachOPoser,
                                    UniversalCputype, UniversalIndex);
   return make_error<GenericBinaryError>("Unrecognized MachO magic number",
                                         object_error::invalid_file_type);

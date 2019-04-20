@@ -330,7 +330,7 @@ public:
   createELFObjectFile(MemoryBufferRef Object);
 
   static Expected<std::unique_ptr<MachOObjectFile>>
-  createMachOObjectFile(MemoryBufferRef Object,
+  createMachOObjectFile(MemoryBufferRef Object, bool MachOPoser = false,
                         uint32_t UniversalCputype = 0,
                         uint32_t UniversalIndex = 0);
 

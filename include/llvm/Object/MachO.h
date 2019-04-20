@@ -271,9 +271,11 @@ public:
   using LoadCommandList = SmallVector<LoadCommandInfo, 4>;
   using load_command_iterator = LoadCommandList::const_iterator;
 
+  // [port] CHANGED: Added `MachOPoser`.
   static Expected<std::unique_ptr<MachOObjectFile>>
   create(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
-         uint32_t UniversalCputype = 0, uint32_t UniversalIndex = 0);
+         bool MachOPoser = false, uint32_t UniversalCputype = 0,
+         uint32_t UniversalIndex = 0);
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
 
@@ -569,6 +571,8 @@ public:
 
   StringRef getStringTableData() const;
   bool is64Bit() const;
+  // [port] CHANGED: Added this method.
+  bool isMachOPoser() const { return MachOPoser; }
   void ReadULEB128s(uint64_t Index, SmallVectorImpl<uint64_t> &Out) const;
 
   static StringRef guessLibraryShortName(StringRef Name, bool &isFramework,
@@ -650,9 +654,10 @@ public:
   }
 
 private:
+  // [port] CHANGED: Added `MachOPoser`.
   MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
-                  Error &Err, uint32_t UniversalCputype = 0,
-                  uint32_t UniversalIndex = 0);
+                  Error &Err, bool MachOPoser = false,
+                  uint32_t UniversalCputype = 0, uint32_t UniversalIndex = 0);
 
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
 
@@ -677,6 +682,8 @@ private:
   const char *DyldInfoLoadCmd = nullptr;
   const char *UuidLoadCmd = nullptr;
   bool HasPageZeroSegment = false;
+  // [port] CHANGED: Added.
+  bool MachOPoser;
 };
 
 /// DiceRef
