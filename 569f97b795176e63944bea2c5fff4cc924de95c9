@@ -1,0 +1,5 @@
+[ver:1,total:600]
+lib/ObjCMetadata/ObjCMachOBinary.cpp:272,1555765200:252,1555768800:20,m
+lib/Object/MachOObjectFile.cpp:200,1555758000:180,1555768800:20,r
+include/llvm/ObjCMetadata/ObjCMachOBinary.h:116,1555765200:96,1555768800:20,m
+include/llvm/ObjCMetadata/ObjCMetadata.h:12,1555765200:12,r
